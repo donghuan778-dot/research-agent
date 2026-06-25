@@ -65,10 +65,18 @@ def build_index():
     return index
 
 
+_cached_index = None
+
+
 def load_index():
     """
     加载已有的索引（不用每次都重建）。
+    用 _cached_index 缓存，避免多次创建 ChromaDB 连接导致冲突。
     """
+    global _cached_index
+    if _cached_index is not None:
+        return _cached_index
+
     embed_model = HuggingFaceEmbedding(
         model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )
@@ -77,11 +85,11 @@ def load_index():
     chroma_collection = chroma_client.get_or_create_collection("research_kb")
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
 
-    index = VectorStoreIndex.from_vector_store(
+    _cached_index = VectorStoreIndex.from_vector_store(
         vector_store=vector_store,
         embed_model=embed_model,
     )
-    return index
+    return _cached_index
 
 
 def query_knowledge(question: str, top_k: int = 3) -> str:
